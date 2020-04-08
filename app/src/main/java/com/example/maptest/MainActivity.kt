@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import kotlinx.android.synthetic.main.activity_main.*
 import net.daum.mf.map.api.MapPOIItem
 import net.daum.mf.map.api.MapPoint
 import net.daum.mf.map.api.MapView
@@ -16,33 +17,55 @@ import java.util.ArrayList
 
 
 class MainActivity : AppCompatActivity(), MapView.POIItemEventListener {
-    private var mCoder: Geocoder ?= null
-
-    private var addr: List<Address> = ArrayList()
-    private val addrList : ArrayList<Address> = ArrayList()
-    private val testAddrList : ArrayList<String> = ArrayList()
-
-    private var lating: Address? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val mapPoint = arrayOfNulls<MapPoint>(2)
+        var mapPoints : ArrayList<MapPoint>  = ArrayList()
 
         val mapView = MapView(this)
         mapView.setDaumMapApiKey("앱키 넣어야됨") // 카톡디벨로퍼에 등록한 앱키
 
-        val mapViewContainer = findViewById<ViewGroup>(R.id.map_view)
+        // 주소 가져오기
+        var dummyList : ArrayList<String> = getDummyData()
 
-        mCoder = Geocoder(this)
+        // 해당주소의 위도, 경도 가져오기
+        mapPoints = getLocation(mapView, mapPoints, dummyList)
 
+        // 마커찍기
+        setMarker(mapView, mapPoints)
+
+        // 주석풀면 카카오 네비로 감
+        //        mapView.setPOIItemEventListener(this);
+
+    }
+
+    private fun getDummyData(): ArrayList<String> {
+        val testAddrList : ArrayList<String> = ArrayList()
         testAddrList.add("경기도 수원시 팔달구 교동 130-4")
         testAddrList.add("경기도 수원시 팔달구 교동 매산로 132")
+        testAddrList.add("경기도 수원시 팔달구 교동 91-1")
+        testAddrList.add("경기도 수원시 팔달구 매교동")
+        testAddrList.add("경기도 수원시 팔달구 교동 90-10")
+        testAddrList.add("경기도 수원시 팔달구 교동 매산로 136 KR")
+        testAddrList.add("경기도 수원시 팔달구 교동 90-7")
+        testAddrList.add("경기도 수원시 팔달구 매교동 4-1")
+        testAddrList.add("경기도 수원시 팔달구 교동 120-1")
+        testAddrList.add("경기도 수원시 팔달구 교동 향교로 129")
+
+        return testAddrList
+    }
+
+    private fun getLocation(mapView: MapView, mapPoint: ArrayList<MapPoint>, testAddrList: ArrayList<String>): ArrayList<MapPoint> {
+
+        val addrList : ArrayList<Address> = ArrayList()
 
         try {
+            val mCoder = Geocoder(this)
+
             for (i in testAddrList.indices) {
-                addr = mCoder?.getFromLocationName(testAddrList.get(i), 5)!!
+                val addr = mCoder.getFromLocationName(testAddrList[i], 5)
                 addrList.addAll(addr)
             }
         } catch (e: IOException) {
@@ -50,40 +73,30 @@ class MainActivity : AppCompatActivity(), MapView.POIItemEventListener {
         }
 
         for (i in addrList.indices) {
-            lating = addrList[i]
+            val lating = addrList[i]
 
-            val lat = lating!!.latitude
-            val lon = lating!!.longitude
+            val lat = lating.latitude
+            val lon = lating.longitude
 
-            mapPoint[i] = MapPoint.mapPointWithGeoCoord(lat, lon)
+            mapPoint.add(MapPoint.mapPointWithGeoCoord(lat, lon))
 
             mapView.setMapCenterPoint(mapPoint[i], true)
         }
-        mapViewContainer.addView(mapView)
+        map_view?.addView(mapView)
 
-        val marker1 = MapPOIItem()
-        marker1.itemName = "테스트1"
-        marker1.tag = 0
-        marker1.mapPoint = mapPoint[0]
-        // 기본으로 제공하는 BluePin 마커 모양.
-        marker1.markerType = MapPOIItem.MarkerType.BluePin
-        // 마커를 클릭했을때, 기본으로 제공하는 RedPin 마커 모양.
-        marker1.selectedMarkerType = MapPOIItem.MarkerType.RedPin
-        mapView.addPOIItem(marker1)
+        return mapPoint
+    }
 
-        val marker2 = MapPOIItem()
-        marker2.itemName = "테스트2"
-        marker2.tag = 0
-        marker2.mapPoint = mapPoint[1]
-        // 기본으로 제공하는 BluePin 마커 모양.
-        marker2.markerType = MapPOIItem.MarkerType.BluePin
-        // 마커를 클릭했을때, 기본으로 제공하는 RedPin 마커 모양.
-        marker2.selectedMarkerType = MapPOIItem.MarkerType.RedPin
-        mapView.addPOIItem(marker2)
-
-        // 주석풀면 카카오 네비로 감
-        //        mapView.setPOIItemEventListener(this);
-
+    private fun setMarker(mapView: MapView, mapPoint: ArrayList<MapPoint>) {
+        for (i in mapPoint.indices) {
+            val marker = MapPOIItem()
+            marker.itemName = "테스트$i"
+            marker.tag = 0
+            marker.mapPoint = mapPoint[i]
+            marker.markerType = MapPOIItem.MarkerType.BluePin
+            marker.selectedMarkerType = MapPOIItem.MarkerType.RedPin
+            mapView.addPOIItem(marker)
+        }
     }
 
     override fun onPOIItemSelected(mapView: MapView, mapPOIItem: MapPOIItem) {

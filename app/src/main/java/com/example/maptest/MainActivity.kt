@@ -18,27 +18,34 @@ import java.util.ArrayList
 
 class MainActivity : AppCompatActivity(), MapView.POIItemEventListener {
 
+    private var latitude : ArrayList<Double> = ArrayList()
+    private var longtitude : ArrayList<Double> = ArrayList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        var mapPoints : ArrayList<MapPoint>  = ArrayList()
+        var mapPoints: ArrayList<MapPoint>
 
         val mapView = MapView(this)
-        mapView.setDaumMapApiKey("앱키 넣어야됨") // 카톡디벨로퍼에 등록한 앱키
+
+        mapView.setDaumMapApiKey("앱키") // 카톡디벨로퍼에 등록한 앱키
+        map_view.addView(mapView)
 
         // 주소 가져오기
         var dummyList : ArrayList<String> = getDummyData()
 
         // 해당주소의 위도, 경도 가져오기
-        mapPoints = getLocation(mapView, mapPoints, dummyList)
+        mapPoints = getLocation(dummyList)
+
+        //내위치
+        mapView.setMapCenterPoint(mapPoints[0], true)
 
         // 마커찍기
         setMarker(mapView, mapPoints)
 
         // 주석풀면 카카오 네비로 감
-        //        mapView.setPOIItemEventListener(this);
-
+        mapView.setPOIItemEventListener(this)
     }
 
     private fun getDummyData(): ArrayList<String> {
@@ -57,34 +64,30 @@ class MainActivity : AppCompatActivity(), MapView.POIItemEventListener {
         return testAddrList
     }
 
-    private fun getLocation(mapView: MapView, mapPoint: ArrayList<MapPoint>, testAddrList: ArrayList<String>): ArrayList<MapPoint> {
-
+    private fun getLocation(testAddrList: ArrayList<String>): ArrayList<MapPoint> {
+        val mapList = ArrayList<MapPoint>()
         val addrList : ArrayList<Address> = ArrayList()
 
         try {
             val mCoder = Geocoder(this)
-
+            var tmpAddrList: List<Address>
             for (i in testAddrList.indices) {
-                val addr = mCoder.getFromLocationName(testAddrList[i], 5)
-                addrList.addAll(addr)
+                tmpAddrList = mCoder.getFromLocationName(testAddrList[i], 5)
+                addrList.addAll(tmpAddrList)
             }
         } catch (e: IOException) {
             e.printStackTrace()
         }
 
         for (i in addrList.indices) {
-            val lating = addrList[i]
 
-            val lat = lating.latitude
-            val lon = lating.longitude
+            val lat = addrList[i].latitude
+            val lon = addrList[i].longitude
 
-            mapPoint.add(MapPoint.mapPointWithGeoCoord(lat, lon))
+            mapList.add(MapPoint.mapPointWithGeoCoord(lat, lon))
 
-            mapView.setMapCenterPoint(mapPoint[i], true)
         }
-        map_view?.addView(mapView)
-
-        return mapPoint
+        return mapList
     }
 
     private fun setMarker(mapView: MapView, mapPoint: ArrayList<MapPoint>) {
@@ -98,16 +101,31 @@ class MainActivity : AppCompatActivity(), MapView.POIItemEventListener {
             mapView.addPOIItem(marker)
         }
     }
+    private fun replaceUri(): String {
+        var uri = "daummaps://route?sp=firstLatitude,firstLongtitude&ep=secondLatitude,secondLongittude&by=CAR"
+
+        uri = uri.replace("firstLatitude", latitude[0].toString())
+            .replace("firstLongtitude", longtitude[0].toString())
+            .replace("secondLatitude", latitude[1].toString())
+            .replace("secondLongittude", longtitude[1].toString())
+
+        return uri
+    }
 
     override fun onPOIItemSelected(mapView: MapView, mapPOIItem: MapPOIItem) {
-        Toast.makeText(applicationContext, "클릭 " + mapPOIItem.getItemName(), Toast.LENGTH_SHORT)
-            .show()
+        latitude.add(mapPOIItem.mapPoint.mapPointGeoCoord.latitude)
+        longtitude.add(mapPOIItem.mapPoint.mapPointGeoCoord.longitude)
 
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("daummaps://route?sp=37.484246,126.975832&ep=37.483911,126.974412&by=CAR") // 위도, 경도 좌표 (구글지도)
-        )
-        startActivity(intent)
+        if (longtitude.size == 2) {
+
+            val uri = replaceUri()
+
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+            startActivity(intent)
+
+            latitude.clear()
+            longtitude.clear()
+        }
     }
 
     override fun onCalloutBalloonOfPOIItemTouched(mapView: MapView, mapPOIItem: MapPOIItem) {

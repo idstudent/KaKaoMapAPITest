@@ -25,5 +25,5 @@
 <!--    카톡디벨로퍼에 등록한 앱키-->
     <meta-data
         android:name="com.kakao.sdk.AppKey"
-        android:value="앱키넣어줘야됨"/>
+        android:value="앱키"/>
 </manifest>
